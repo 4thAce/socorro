@@ -20,7 +20,9 @@ if [ ! -d "$BUILD_DIR" ]; then
 fi
 
 echo "> Building Socorro $BUILD_VERSION ..."
-if [ "$BUILD_TYPE" != "tar" ]; then
+if [ "$BUILD_TYPE" == "tar" ]; then
+    tar -C ${BUILD_DIR%%socorro} --mode 755 --exclude-vcs --owner 0 --group 0 -zcf socorro.tar.gz socorro/
+elif [ "${BUILD_TYPE}" == 'rpm' ]; then
     fpm -s dir -t $BUILD_TYPE \
         -v $BUILD_VERSION \
         -n "socorro" \
@@ -60,8 +62,45 @@ if [ "$BUILD_TYPE" != "tar" ]; then
         --deb-suggests 'apache2' \
         --deb-suggests 'libapache2-mod-wsgi' \
         data etc var usr
-else
-    tar -C ${BUILD_DIR%%socorro} --mode 755 --exclude-vcs --owner 0 --group 0 -zcf socorro.tar.gz socorro/
+elif [ "${BUILD_TYPE}" == 'deb' ]; then
+  fpm -s dir -t $BUILD_TYPE \
+      -v $BUILD_VERSION \
+      -n "socorro" \
+      -m "<socorro-dev@mozilla.com>" \
+      -C $BUILD_DIR \
+      --epoch 1 \
+      --license "MPL" \
+      --vendor "Mozilla" \
+      --url "https://wiki.mozilla.org/Socorro" \
+      --description "$DESC" \
+      --before-install scripts/package/$BUILD_TYPE-before-install.sh \
+      --after-install scripts/package/$BUILD_TYPE-after-install.sh \
+      --before-remove scripts/package/$BUILD_TYPE-before-remove.sh \
+      --after-remove scripts/package/$BUILD_TYPE-after-remove.sh \
+      --config-files /etc/socorro \
+      --exclude *.pyc \
+      --exclude *.swp \
+      --depends 'libgcc-4.8-dev > 4.1.0' \
+      --depends 'cyrus-sasl2-dbg > 2.1.23' \
+      --depends 'libstdc++-4.8-dev > 4.4' \
+      --depends 'libxml2 > 2.7.3' \
+      --depends 'libxslt1-dev > 1.1.25' \
+      --depends 'zlib1g > 1.1.9' \
+      --depends 'node-less' \
+      --depends 'consul > 0-0.5.0' \
+      --deb-suggests 'libpq5' \
+      --deb-suggests 'openjdk-7-jre-headless' \
+      --deb-suggests 'python-virtualenv' \
+      --deb-suggests 'postgresql-9.3' \
+      --deb-suggests 'postgresql-plperl-9.3' \
+      --deb-suggests 'postgresql-contrib-9.3' \
+      --deb-suggests 'rsync' \
+      --deb-suggests 'rabbitmq-server' \
+      --deb-suggests 'elasticsearch' \
+      --deb-suggests 'memcached' \
+      --deb-suggests 'apache2' \
+      --deb-suggests 'libapache2-mod-wsgi' \
+      data etc var usr
 fi
 
 echo "> Build Complete."
